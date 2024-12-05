@@ -28,7 +28,16 @@ CASE
 	WHEN age BETWEEN 55 AND 64 THEN '55-64'
 	ELSE '65+'
 END AS age_group, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY(
+	CASE 
+	WHEN age < 18 THEN '<18'
+	WHEN age BETWEEN 18 AND 24 THEN '18-24'
+    WHEN age BETWEEN 25 AND 34 THEN '25-34'
+    WHEN age BETWEEN 35 AND 44 THEN '35-44'
+    WHEN age BETWEEN 45 AND 54 THEN '45-54'
+	WHEN age BETWEEN 55 AND 64 THEN '55-64'
+	ELSE '65+'
+    END)), 2) AS percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
@@ -36,7 +45,7 @@ ORDER BY 1, 2;
 
 -- Gender
 SELECT diagnosis, gender, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY gender), 2) AS percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
@@ -44,7 +53,7 @@ ORDER BY 1, 2;
 
 -- Ethnicity
 SELECT diagnosis, ethnicity, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY ethnicity), 2) AS percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
@@ -52,7 +61,7 @@ ORDER BY 1, 2;
 
 -- Education Percentage
 SELECT diagnosis, EducationLevel, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS education_percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY EducationLevel), 2) AS education_percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
@@ -66,7 +75,13 @@ CASE
     WHEN BMI BETWEEN 25 AND 30 THEN 'overweight'
     WHEN BMI > 30 THEN 'obese'
 END AS bmi_group, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY (
+	CASE 
+    WHEN BMI < 18.5 THEN 'underweight'
+    WHEN BMI BETWEEN 18.5 AND 25 THEN 'healthy'
+    WHEN BMI BETWEEN 25 AND 30 THEN 'overweight'
+    WHEN BMI > 30 THEN 'obese'
+    END)), 2) AS percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
@@ -74,13 +89,10 @@ ORDER BY 1, 2;
 
 -- Smoking Percentage
 SELECT diagnosis, smoking, COUNT(*) AS pop,
-ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY smoking), 2) AS percentage
 FROM asthma 
 GROUP BY 1, 2 
 ORDER BY 1, 2;
-
-
--- PhysicalActivity
 
 
 -- Symptoms
@@ -93,10 +105,23 @@ SELECT
 		ELSE 'severe'
 	END AS symptoms,
     COUNT(*) AS pop,
-	ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY diagnosis), 2) AS percentage
+	ROUND(COUNT(*) * 100 / SUM(COUNT(*)) OVER (PARTITION BY (
+    CASE 
+		WHEN Wheezing + ShortnessOfBreath + ChestTightness + Coughing + NighttimeSymptoms + ExerciseInduced = 0 THEN 'no symptoms'
+		WHEN Wheezing + ShortnessOfBreath + ChestTightness + Coughing + NighttimeSymptoms + ExerciseInduced <= 2 THEN 'mild symptoms'
+		WHEN Wheezing + ShortnessOfBreath + ChestTightness + Coughing + NighttimeSymptoms + ExerciseInduced  <= 4 THEN 'moderate symptoms'
+		ELSE 'severe'
+	END)), 2) AS percentage
 FROM asthma
 GROUP BY 1, 2
 ORDER BY 1, 2;
+
+
+-- Environment
+SELECT diagnosis, AVG(PhysicalActivity),	AVG(DietQuality), AVG(SleepQuality), 
+				 AVG(PollutionExposure), AVG(PollenExposure), AVG(DustExposure)
+FROM asthma
+GROUP BY diagnosis;
 
 
 -- Symptoms vs environment
@@ -115,4 +140,20 @@ FROM (
 GROUP BY symptoms;
 
 
--- Environment vs ethnicity, gender, age, education
+-- Environment vs ethnicity, gender, education
+SELECT Ethnicity, AVG(PhysicalActivity), AVG(DietQuality), AVG(SleepQuality), 
+				  AVG(PollutionExposure), AVG(PollenExposure), AVG(DustExposure)
+FROM asthma
+GROUP BY 1;
+
+
+SELECT Gender, AVG(PhysicalActivity),	AVG(DietQuality), AVG(SleepQuality), 
+				  AVG(PollutionExposure), AVG(PollenExposure), AVG(DustExposure)
+FROM asthma
+GROUP BY 1;
+
+
+SELECT EducationLevel, AVG(PhysicalActivity),	AVG(DietQuality), AVG(SleepQuality), 
+				  AVG(PollutionExposure), AVG(PollenExposure), AVG(DustExposure)
+FROM asthma
+GROUP BY 1;
